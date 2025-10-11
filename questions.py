@@ -130,14 +130,14 @@ def q1():
 def q2():
     print("Running question 2...", end="", flush=True)
     bounds = [
-        [-2, -6],    # x bounds
-        [5,   6]     # y bounds
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
     ]
     res = 1.0
     obstacles = get_obstacles(res)
 
-    start = np.array([-2, 6])
-    goal = np.array([5, 6])
+    start = np.array([-2, -6])
+    goal = np.array([4, 5])
 
     path = a_star(start, goal, bounds, res, obstacles)
     plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q2.png')
