@@ -1,0 +1,21 @@
+"""
+run.py
+
+Main script for HW0 of ME 469 at Northwestern University.
+
+Author: Jared Berry
+Date: 10/11/2025
+""" 
+from questions import q1, q2
+
+def main():
+    print("*** STARTING ***\n")
+
+    q1()
+    q2()
+    
+    print("\n*** DONE ***")
+    return
+
+if __name__ == "__main__":
+    main()
