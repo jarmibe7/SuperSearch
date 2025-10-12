@@ -216,7 +216,6 @@ def q6():
     ]
     res = 0.1
 
-    # 0.3, more in each dir = 0.7m side length = 49 times area increase
     obstacles = get_obstacles(bounds, res, inflate=3)
 
     start = np.array([-2, -6])

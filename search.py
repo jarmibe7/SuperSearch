@@ -13,9 +13,6 @@ def round_to_res(n, res):
     """
     Given a number or np.ndarray of numbers, round to a given resolution.
     """
-    # idx = np.round(n / res).astype(int)
-    # # Convert back to actual value
-    # return idx * res
     if isinstance(n, tuple): n_arr = np.array(n)
     else: n_arr = n
     return np.round(np.floor(n_arr / res)*res, 1)   # TODO: Better way of eliminating floating point
@@ -39,32 +36,53 @@ class Node():
         self.gcost = np.inf
         self.hcost = np.inf
 
+    def round_neighbor_to_res(self, n, res):
+        """
+        Rounding for neighbors should round to closest resolution interval
+        instead of rounding down.
+        """
+        return np.round(np.round(n / res)*res, 1)
+
     def get_neighbor_coords(self, bounds, res):
         neighbors = []
-        neighbors.append(self.position + np.array([0.0, res]))    # Top
-        neighbors.append(self.position + np.array([res, res]))    # Top right
-        neighbors.append(self.position + np.array([res, 0.0]))    # Right
-        neighbors.append(self.position + np.array([res, -res]))   # Bottom right
-        neighbors.append(self.position + np.array([0.0, -res]))   # Bottom
-        neighbors.append(self.position + np.array([-res, -res]))  # Bottom left
-        neighbors.append(self.position + np.array([-res, 0.0]))   # Left
-        neighbors.append(self.position + np.array([-res, res]))   # Top left
+        # neighbors.append(self.position + np.array([0.0, res]))    # Top
+        # neighbors.append(self.position + np.array([res, res]))    # Top right
+        # neighbors.append(self.position + np.array([res, 0.0]))    # Right
+        # neighbors.append(self.position + np.array([res, -res]))   # Bottom right
+        # neighbors.append(self.position + np.array([0.0, -res]))   # Bottom
+        # neighbors.append(self.position + np.array([-res, -res]))  # Bottom left
+        # neighbors.append(self.position + np.array([-res, 0.0]))   # Left
+        # neighbors.append(self.position + np.array([-res, res]))   # Top left
         
-        # Check bounds
-        neighbors_filtered = []
-        for n in neighbors:
-            if n[0] >= bounds[0][0] and n[0] < bounds[0][1] and \
-               n[1] >= bounds[1][0] and n[1] < bounds[1][1]:
-                neighbors_filtered.append(round_to_res(n, res))
+        # # Check bounds
+        # neighbors_filtered = []
+        # for n in neighbors:
+        #     if n[0] >= bounds[0][0] and n[0] < bounds[0][1] and \
+        #        n[1] >= bounds[1][0] and n[1] < bounds[1][1]:
+        #         neighbors_filtered.append(round_to_res(n, res))
 
-        return neighbors_filtered
+        # Cover full immediate neighborhood
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                x, y = (self.position[0] + dx * res), (self.position[1] + dy * res)
+
+                neigh = self.round_neighbor_to_res(np.array([x,y]), res)
+                
+                # Skip node coords
+                if tuple(neigh) == tuple(self.position):
+                    continue
+
+                # Check bounds
+                if bounds[0][0] <= neigh[0] < bounds[0][1] and bounds[1][0] <= neigh [1] < bounds[1][1]:
+                    neighbors.append(tuple(neigh))
+
+        return neighbors
 
 
     def set_cost(self, gcost, hcost):
-        if not self.obs:
-            self.gcost = gcost
-            self.hcost = hcost
-            self.fcost = self.gcost + self.hcost
+        self.gcost = gcost
+        self.hcost = hcost
+        self.fcost = self.gcost + self.hcost
 
     # Comparison and representation
     def __eq__(self, other):    # For checking position equality
@@ -110,9 +128,9 @@ def a_star(start, goal, bounds, res, obstacles):
 
     found = False
     current = start
-    test_iter = 0
+    test_iter = 0   # DEBUG
     while open_heap:
-        test_iter += 1
+        test_iter += 1  # DEBUG
         # Get node in open set with lowest f cost
         current = heapq.heappop(open_heap)
         curr_pos = tuple(round_to_res(current.position, res))
@@ -184,13 +202,13 @@ def a_star_online(start, goal, bounds, res, obstacles):
         if not naive_path: break  # No path found
 
         # Follow naive path
-        for node in naive_path:
+        for node in naive_path[1:]: # First node in path is last node of prev path
             # If node on naive path is obstacle, add to known_obstacles and replan
             if node in obstacles:
                 known_obstacles.add(node)
                 # TODO: Check all neighbors of current for obstacles as well
                 break
-            elif node not in path:
+            else:
                 # Otherwise, continue on planned path
                 current = node
                 path.append(current)
