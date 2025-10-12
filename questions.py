@@ -70,13 +70,14 @@ def plot_grid(bounds, res, obstacles, title=None):
         ax.add_patch(rect)
 
     # Set up grid
+
+    # Set up axis labels
+    if res >= 0.5:
+        ax.set_xticklabels(x_range)
+        ax.set_yticklabels(y_range)
     ax.set_xticks(x_range)
     ax.set_yticks(y_range)
     ax.grid(color='black', linewidth=0.4)
-
-    # Set up axis labels
-    ax.set_xticklabels(x_range)
-    ax.set_yticklabels(y_range)
     ax.set_xlabel('X Coordinate')
     ax.set_ylabel('Y Coordinate')
 
@@ -89,7 +90,7 @@ def plot_grid(bounds, res, obstacles, title=None):
 
     return fig, ax
 
-def get_obstacles(res):
+def get_obstacles(bounds, res, inflate=1.0):
     # Read ground truth landmark data
     landmarks_truth_data_path = os.path.join(DATA_PATH, 'ds1_Landmark_Groundtruth.dat')
     landmarks_truth = pd.read_csv(landmarks_truth_data_path, sep=r"\s+", comment="#", header=None, names=["subject", "x", "y", "x_sig", "y_sig"])
@@ -100,20 +101,25 @@ def get_obstacles(res):
     for i, l in enumerate(landmarks):
         l_round = round_to_res(l, res)
 
-        # Take up entire cell and plot rectangle
-        if l[0] < l_round[0]: l_round[0] -= res
-        if l[1] < l_round[1]: l_round[1] -= res
+        l_center = l_round + res/2
+        r = (np.sqrt(inflate)/2)*res - 1e-8
+        inflate_l_bounds = round_to_res(np.array([
+            l_center - r,
+            l_center + r 
+        ]), res)
 
-        landmarks_rounded.add(tuple(l_round))
+        # Check all potential cells covered by inflated size
+        for xi in np.arange(inflate_l_bounds[0][0], inflate_l_bounds[1][0]+1, step=res):
+            for yi in np.arange(inflate_l_bounds[0][1], inflate_l_bounds[1][1]+1, step=res):
+                new_l_node = (xi, yi)
+                # Check x bounds, y bounds, and duplicate
+                if xi >= bounds[0][0] and xi < bounds[0][1] and \
+                yi >= bounds[1][0] and yi < bounds[1][1] and \
+                new_l_node not in landmarks_rounded:
+                
+                    landmarks_rounded.add(tuple(new_l_node))
 
     return landmarks_rounded
-
-def build_gridworld(bounds, res=1.0):
-    x = np.arange(bounds[0][0], bounds[0][1], step=res)
-    y = np.arange(bounds[1][0], bounds[1][1], step=res)
-    X, Y = np.meshgrid(x, y)
-
-    return X, Y
 
 def q1():
     print("Running question 1...", end="", flush=True)
@@ -122,7 +128,7 @@ def q1():
         [-6, 6]     # y bounds
     ]
     res = 1.0
-    obstacles = get_obstacles(res)
+    obstacles = get_obstacles(bounds, res)
 
     _ = plot_grid(bounds, res, obstacles)
     print("Done\n")
@@ -134,7 +140,7 @@ def q2():
         [-6, 6]     # y bounds
     ]
     res = 1.0
-    obstacles = get_obstacles(res)
+    obstacles = get_obstacles(bounds, res)
 
     start = np.array([-2, -6])
     goal = np.array([4, 5])
@@ -151,7 +157,7 @@ def q3():
         [-6, 6]     # y bounds
     ]
     res = 1.0
-    obstacles = get_obstacles(res)
+    obstacles = get_obstacles(bounds, res)
 
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
@@ -177,7 +183,7 @@ def q4():
         [-6, 6]     # y bounds
     ]
     res = 1.0
-    obstacles = get_obstacles(res)
+    obstacles = get_obstacles(bounds, res)
 
     start = np.array([-2, -6])
     goal = np.array([4, 5])
@@ -193,7 +199,7 @@ def q5():
         [-6, 6]     # y bounds
     ]
     res = 1.0
-    obstacles = get_obstacles(res)
+    obstacles = get_obstacles(bounds, res)
 
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
@@ -209,5 +215,22 @@ def q5():
     goal = round_to_res(np.array([1.5, -3.5]), res)
     path = a_star_online(start, goal, bounds, res, obstacles)
     plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5c.png')
+
+    print("Done\n")
+
+def q6():
+    print("Running question 6...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 1.0
+    obstacles = get_obstacles(bounds, res, inflate=1.0)
+
+
+    start = np.array([-2, -6])
+    goal = np.array([4, 5])
+    path = a_star(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online A* Search - res={res}', 'q6.png')
 
     print("Done\n")

@@ -80,23 +80,28 @@ def a_star(start, goal, bounds, res, obstacles):
         return np.linalg.norm(goal - node)
     
     # Initialization
-    open = []           # To be evaluated
-    node_lookup = {}    # Map positions to nodes
-    closed = []         # Already evaluated
+    open_heap = []           # To be evaluated, heapq
+    open_set = set()         # Fast lookup to see if nodes are in open set
+    node_lookup = {}         # Map positions to nodes
+    closed = set()           # Already evaluated
     move_cost = 1.0
     obs_cost = 1000.0
     
+    # Add starting node to open set
     start_node = Node(start, parent=None, obs=False)
     start_node.set_cost(0, h(start))
     node_lookup[tuple(start)] = start_node
-    heapq.heappush(open, start_node)
+    heapq.heappush(open_heap, start_node)
+    open_set.add(tuple(start))
 
     found = False
     current = start
-    while open:
+    while open_heap:
         # Get node in open set with lowest f cost
-        current = heapq.heappop(open)
-        closed.append(tuple(current.position))
+        current = heapq.heappop(open_heap)
+        curr_pos = tuple(current.position)
+        open_set.remove(curr_pos)
+        closed.add(curr_pos)
 
         # Return if current is the goal
         if (current.position == goal).all():
@@ -115,12 +120,15 @@ def a_star(start, goal, bounds, res, obstacles):
             neigh_hcost = h(neigh)
 
             # If neighbor in set AND new f cost of neighbor is lower OR neighbor not in set
-            neigh_node = Node(neigh, parent=current, obs=obs)
-            neigh_node.set_cost(neigh_gcost, neigh_hcost)
-            if (neigh_node in open and neigh_node < node_lookup[tuple(neigh)]) or\
-                neigh_node not in open:
+            if tuple(neigh) not in node_lookup: neigh_node = Node(neigh, parent=current, obs=obs)
+            else: neigh_node = node_lookup[tuple(neigh)]
+            if (tuple(neigh) in open_set and neigh_gcost < node_lookup[tuple(neigh)].gcost) or\
+                tuple(neigh) not in open_set:
                 # Update node lookup and add (or re-add) neighbor to open set
-                heapq.heappush(open, neigh_node)
+                neigh_node.parent = current
+                neigh_node.set_cost(neigh_gcost, neigh_hcost)
+                heapq.heappush(open_heap, neigh_node)
+                open_set.add(tuple(neigh))
                 node_lookup[tuple(neigh)] = neigh_node
 
     path = []
@@ -149,16 +157,20 @@ def a_star_online(start, goal, bounds, res, obstacles):
     path = [tuple(start)]
     known_obstacles = set() # Start without known obstacles
 
+    if tuple(start) in obstacles: return path
+
     # Continue until goal is reached
     current = start
     while not (current == goal).all():
         naive_path = a_star(current, goal, bounds, res, known_obstacles)
+        if not naive_path: break  # No path found
 
         # Follow naive path
         for node in naive_path:
             # If node on naive path is obstacle, add to known_obstacles and replan
             if node in obstacles:
                 known_obstacles.add(node)
+                # TODO: Check all neighbors of current for obstacles as well
                 break
             elif node not in path:
                 # Otherwise, continue on planned path
