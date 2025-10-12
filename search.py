@@ -10,10 +10,16 @@ import numpy as np
 import heapq
 
 def pos_to_grid(pos, res):
+    """
+    Convert from orig units to internal integer representation
+    """
     return tuple(np.floor(np.array(pos) / res).astype(int))
 
 def grid_to_pos(grid, res):
-    return np.array(grid) * res
+    """
+    Convert from integer rep back to orig units
+    """
+    return np.round(np.array(grid)*res, 1)
 
 def round_to_res(n, res):
     """
@@ -151,7 +157,8 @@ def a_star(start_f, goal_f, bounds_f, res, obstacles_f, return_float=True):
             if neigh in closed: continue
             
             # Calculate gcost, hcost, and fcost based on current
-            obs = neigh in obstacles
+            # Check both integer rep. and orig rep. in case of float point error
+            obs = (neigh in obstacles) or (tuple(grid_to_pos(neigh, res)) in obstacles_f)
             if obs: neigh_gcost = current.gcost + obs_cost
             else: neigh_gcost = current.gcost + move_cost
             neigh_hcost = h(neigh)
