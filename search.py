@@ -13,9 +13,12 @@ def round_to_res(n, res):
     """
     Given a number or np.ndarray of numbers, round to a given resolution.
     """
-    idx = np.round(n / res).astype(int)
-    # Convert back to actual value
-    return idx * res
+    # idx = np.round(n / res).astype(int)
+    # # Convert back to actual value
+    # return idx * res
+    if isinstance(n, tuple): n_arr = np.array(n)
+    else: n_arr = n
+    return np.round(np.floor(n_arr / res)*res, 1)   # TODO: Better way of eliminating floating point
 
 class Node():
     """
@@ -168,6 +171,7 @@ def a_star_online(start, goal, bounds, res, obstacles):
         obstacles: np.ndarray of obstacle locations, rounded to Gridworld resolution
     """
     # Initialization
+    start, goal = round_to_res(start, res), round_to_res(goal, res)
     path = [tuple(start)]
     known_obstacles = set() # Start without known obstacles
 
