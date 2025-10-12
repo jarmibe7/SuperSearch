@@ -42,8 +42,8 @@ class Node():
         # Check bounds
         neighbors_filtered = []
         for n in neighbors:
-            if n[0] >= bounds[0][0] and n[0] <= bounds[0][1] and \
-               n[1] >= bounds[1][0] and n[1] <= bounds[1][1]:
+            if n[0] >= bounds[0][0] and n[0] < bounds[0][1] and \
+               n[1] >= bounds[1][0] and n[1] < bounds[1][1]:
                 neighbors_filtered.append(n)
 
         return neighbors_filtered
@@ -73,7 +73,7 @@ def a_star(start, goal, bounds, res, obstacles):
         start: Starting position of robot
         goal: Goal position
         bounds: Gridworld bounds
-        obstacles: np.ndarray of obstacle locations, rounded to Gridworld resolution
+        obstacles: Set of obstacle locations, rounded to Gridworld resolution
     """
     # Heuristic cost is Euclidean distance
     def h(node):
@@ -85,7 +85,6 @@ def a_star(start, goal, bounds, res, obstacles):
     closed = []         # Already evaluated
     move_cost = 1.0
     obs_cost = 1000.0
-    obstacle_set = set(map(tuple, obstacles))
     
     start_node = Node(start, parent=None, obs=False)
     start_node.set_cost(0, h(start))
@@ -110,7 +109,7 @@ def a_star(start, goal, bounds, res, obstacles):
             if tuple(neigh) in closed: continue
             
             # Calculate gcost, hcost, and fcost based on current
-            obs = tuple(neigh) in obstacle_set
+            obs = tuple(neigh) in obstacles
             if obs: neigh_gcost = current.gcost + obs_cost
             else: neigh_gcost = current.gcost + move_cost
             neigh_hcost = h(neigh)
@@ -128,11 +127,43 @@ def a_star(start, goal, bounds, res, obstacles):
     if found:
         current = node_lookup[tuple(goal)]
         while current is not None:
-            path.append(current.position)
+            path.append(tuple(current.position))
             current = current.parent
 
         path.reverse()
 
     return path
 
+def a_star_online(start, goal, bounds, res, obstacles):
+    """
+    Use A* path finding to determine the best path from a start to a goal, planning
+    online to avoid obstacles.
+
+    Args:
+        start: Starting position of robot
+        goal: Goal position
+        bounds: Gridworld bounds
+        obstacles: np.ndarray of obstacle locations, rounded to Gridworld resolution
+    """
+    # Initialization
+    path = [tuple(start)]
+    known_obstacles = set() # Start without known obstacles
+
+    # Continue until goal is reached
+    current = start
+    while not (current == goal).all():
+        naive_path = a_star(current, goal, bounds, res, known_obstacles)
+
+        # Follow naive path
+        for node in naive_path:
+            # If node on naive path is obstacle, add to known_obstacles and replan
+            if node in obstacles:
+                known_obstacles.add(node)
+                break
+            elif node not in path:
+                # Otherwise, continue on planned path
+                current = node
+                path.append(current)
+
+    return path
 

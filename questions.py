@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
 
-from search import a_star
+from search import a_star, a_star_online
 
 PLOT_PATH = os.path.join(__file__, "..\\figures")
 DATA_PATH = os.path.join(__file__, "..\\data")
@@ -22,7 +22,7 @@ def round_to_res(n, res):
     """
     Given a number or np.ndarray of numbers, round to a given resolution.
     """
-    return np.round(n / res)*res
+    return np.floor(n / res)*res
 
 def plot_search(start, goal, path, bounds, res, obstacles, title, filename):
     fig, ax = plot_grid(bounds, res, obstacles, title)
@@ -96,7 +96,7 @@ def get_obstacles(res):
     landmarks = landmarks_truth.to_numpy()[:, 1:3]
      
     # Plot landmarks
-    landmarks_rounded = np.zeros(landmarks.shape)
+    landmarks_rounded = set()  # Set of landmarks
     for i, l in enumerate(landmarks):
         l_round = round_to_res(l, res)
 
@@ -104,7 +104,7 @@ def get_obstacles(res):
         if l[0] < l_round[0]: l_round[0] -= res
         if l[1] < l_round[1]: l_round[1] -= res
 
-        landmarks_rounded[i] = l_round
+        landmarks_rounded.add(tuple(l_round))
 
     return landmarks_rounded
 
@@ -141,5 +141,73 @@ def q2():
 
     path = a_star(start, goal, bounds, res, obstacles)
     plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q2.png')
+
+    print("Done\n")
+
+def q3():
+    print("Running question 3...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 1.0
+    obstacles = get_obstacles(res)
+
+    start = round_to_res(np.array([0.5, -1.5]), res)
+    goal = round_to_res(np.array([0.5, 1.5]), res)
+    path = a_star(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q3a.png')
+
+    start = round_to_res(np.array([4.5, 3.5]), res)
+    goal = round_to_res(np.array([4.5, -1.5]), res)
+    path = a_star(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q3b.png')
+
+    start = round_to_res(np.array([-0.5, 5.5]), res)
+    goal = round_to_res(np.array([1.5, -3.5]), res)
+    path = a_star(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q3c.png')
+
+    print("Done\n")
+
+def q4():
+    print("Running question 4...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 1.0
+    obstacles = get_obstacles(res)
+
+    start = np.array([-2, -6])
+    goal = np.array([4, 5])
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, 'Online A* Search', 'q4.png')
+
+    print("Done\n")
+
+def q5():
+    print("Running question 5...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 1.0
+    obstacles = get_obstacles(res)
+
+    start = round_to_res(np.array([0.5, -1.5]), res)
+    goal = round_to_res(np.array([0.5, 1.5]), res)
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5a.png')
+
+    start = round_to_res(np.array([4.5, 3.5]), res)
+    goal = round_to_res(np.array([4.5, -1.5]), res)
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5b.png')
+
+    start = round_to_res(np.array([-0.5, 5.5]), res)
+    goal = round_to_res(np.array([1.5, -3.5]), res)
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5c.png')
 
     print("Done\n")
