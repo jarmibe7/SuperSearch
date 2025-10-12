@@ -11,11 +11,11 @@ from questions import q1, q2, q3, q4, q5, q6
 def main():
     print("*** STARTING ***\n")
 
-    # q1()
-    # q2()
-    # q3()
-    # q4()
-    # q5()
+    q1()
+    q2()
+    q3()
+    q4()
+    q5()
     q6()
     
     print("\n*** DONE ***")

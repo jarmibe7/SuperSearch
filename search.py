@@ -9,6 +9,14 @@ Date: 10/11/2025
 import numpy as np
 import heapq
 
+def round_to_res(n, res):
+    """
+    Given a number or np.ndarray of numbers, round to a given resolution.
+    """
+    idx = np.round(n / res).astype(int)
+    # Convert back to actual value
+    return idx * res
+
 class Node():
     """
     A node in an A* search graph.
@@ -44,7 +52,7 @@ class Node():
         for n in neighbors:
             if n[0] >= bounds[0][0] and n[0] < bounds[0][1] and \
                n[1] >= bounds[1][0] and n[1] < bounds[1][1]:
-                neighbors_filtered.append(n)
+                neighbors_filtered.append(round_to_res(n, res))
 
         return neighbors_filtered
 
@@ -75,6 +83,9 @@ def a_star(start, goal, bounds, res, obstacles):
         bounds: Gridworld bounds
         obstacles: Set of obstacle locations, rounded to Gridworld resolution
     """
+    # Round to given resolution
+    start, goal = round_to_res(start, res), round_to_res(goal, res)
+
     # Heuristic cost is Euclidean distance
     def h(node):
         return np.linalg.norm(goal - node)
@@ -96,21 +107,24 @@ def a_star(start, goal, bounds, res, obstacles):
 
     found = False
     current = start
+    test_iter = 0
     while open_heap:
+        test_iter += 1
         # Get node in open set with lowest f cost
         current = heapq.heappop(open_heap)
-        curr_pos = tuple(current.position)
+        curr_pos = tuple(round_to_res(current.position, res))
         open_set.remove(curr_pos)
         closed.add(curr_pos)
 
         # Return if current is the goal
-        if (current.position == goal).all():
+        if curr_pos == tuple(goal):
             found = True
             break
 
         # Iterate over neighbors of current
         neighbors = current.get_neighbor_coords(bounds, res)
         for neigh in neighbors:
+            neigh = round_to_res(neigh, res)
             if tuple(neigh) in closed: continue
             
             # Calculate gcost, hcost, and fcost based on current

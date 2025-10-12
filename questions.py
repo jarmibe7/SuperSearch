@@ -12,17 +12,11 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
 
-from search import a_star, a_star_online
+from search import round_to_res, a_star, a_star_online
 
 PLOT_PATH = os.path.join(__file__, "..\\figures")
 DATA_PATH = os.path.join(__file__, "..\\data")
 METRICS_PATH = os.path.join(__file__, "..\\metrics")
-
-def round_to_res(n, res):
-    """
-    Given a number or np.ndarray of numbers, round to a given resolution.
-    """
-    return np.floor(n / res)*res
 
 def plot_search(start, goal, path, bounds, res, obstacles, title, filename):
     fig, ax = plot_grid(bounds, res, obstacles, title)
@@ -103,21 +97,26 @@ def get_obstacles(bounds, res, inflate=1.0):
 
         l_center = l_round + res/2
         r = (np.sqrt(inflate)/2)*res - 1e-8
-        inflate_l_bounds = round_to_res(np.array([
+        inf_l_bounds = round_to_res(np.array([
             l_center - r,
             l_center + r 
         ]), res)
 
-        # Check all potential cells covered by inflated size
-        for xi in np.arange(inflate_l_bounds[0][0], inflate_l_bounds[1][0]+1, step=res):
-            for yi in np.arange(inflate_l_bounds[0][1], inflate_l_bounds[1][1]+1, step=res):
+        # Add center landmark
+        landmarks_rounded.add(tuple(l_round))
+
+        # Check all potential cells covered by inflated size (+1 for endpoint)
+        num_x = round((inf_l_bounds[1][0] - inf_l_bounds[0][0])/res) + 1
+        num_y = round((inf_l_bounds[1][1] - inf_l_bounds[0][1])/res) + 1
+        for xi in np.linspace(inf_l_bounds[0][0], inf_l_bounds[1][0], endpoint=True, num=num_x):
+            for yi in np.linspace(inf_l_bounds[0][1], inf_l_bounds[1][1], endpoint=True, num=num_y):
                 new_l_node = (xi, yi)
                 # Check x bounds, y bounds, and duplicate
                 if xi >= bounds[0][0] and xi < bounds[0][1] and \
                 yi >= bounds[1][0] and yi < bounds[1][1] and \
                 new_l_node not in landmarks_rounded:
                 
-                    landmarks_rounded.add(tuple(new_l_node))
+                    landmarks_rounded.add(tuple(round_to_res(np.array(new_l_node), res)))
 
     return landmarks_rounded
 
@@ -201,18 +200,18 @@ def q5():
     res = 1.0
     obstacles = get_obstacles(bounds, res)
 
-    start = round_to_res(np.array([0.5, -1.5]), res)
-    goal = round_to_res(np.array([0.5, 1.5]), res)
+    start = np.array([0.5, -1.5])
+    goal = np.array([0.5, 1.5])
     path = a_star_online(start, goal, bounds, res, obstacles)
     plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5a.png')
 
-    start = round_to_res(np.array([4.5, 3.5]), res)
-    goal = round_to_res(np.array([4.5, -1.5]), res)
+    start = np.array([4.5, 3.5])
+    goal = np.array([4.5, -1.5])
     path = a_star_online(start, goal, bounds, res, obstacles)
     plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5b.png')
 
-    start = round_to_res(np.array([-0.5, 5.5]), res)
-    goal = round_to_res(np.array([1.5, -3.5]), res)
+    start = np.array([-0.5, 5.5])
+    goal = np.array([1.5, -3.5])
     path = a_star_online(start, goal, bounds, res, obstacles)
     plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5c.png')
 
@@ -224,9 +223,10 @@ def q6():
         [-2, 5],    # x bounds
         [-6, 6]     # y bounds
     ]
-    res = 1.0
-    obstacles = get_obstacles(bounds, res, inflate=1.0)
+    res = 0.1
 
+    # 0.3, more in each dir = 0.7m side length = 49 times area increase
+    obstacles = get_obstacles(bounds, res, inflate=49)
 
     start = np.array([-2, -6])
     goal = np.array([4, 5])
