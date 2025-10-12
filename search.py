@@ -9,6 +9,12 @@ Date: 10/11/2025
 import numpy as np
 import heapq
 
+def pos_to_grid(pos, res):
+    return tuple(np.floor(np.array(pos) / res).astype(int))
+
+def grid_to_pos(grid, res):
+    return np.array(grid) * res
+
 def round_to_res(n, res):
     """
     Given a number or np.ndarray of numbers, round to a given resolution.
@@ -45,28 +51,14 @@ class Node():
 
     def get_neighbor_coords(self, bounds, res):
         neighbors = []
-        # neighbors.append(self.position + np.array([0.0, res]))    # Top
-        # neighbors.append(self.position + np.array([res, res]))    # Top right
-        # neighbors.append(self.position + np.array([res, 0.0]))    # Right
-        # neighbors.append(self.position + np.array([res, -res]))   # Bottom right
-        # neighbors.append(self.position + np.array([0.0, -res]))   # Bottom
-        # neighbors.append(self.position + np.array([-res, -res]))  # Bottom left
-        # neighbors.append(self.position + np.array([-res, 0.0]))   # Left
-        # neighbors.append(self.position + np.array([-res, res]))   # Top left
-        
-        # # Check bounds
-        # neighbors_filtered = []
-        # for n in neighbors:
-        #     if n[0] >= bounds[0][0] and n[0] < bounds[0][1] and \
-        #        n[1] >= bounds[1][0] and n[1] < bounds[1][1]:
-        #         neighbors_filtered.append(round_to_res(n, res))
 
         # Cover full immediate neighborhood
         for dx in range(-1, 2):
             for dy in range(-1, 2):
-                x, y = (self.position[0] + dx * res), (self.position[1] + dy * res)
+                x, y = (self.position[0] + dx), (self.position[1] + dy)
 
-                neigh = self.round_neighbor_to_res(np.array([x,y]), res)
+                # neigh = self.round_neighbor_to_res(np.array([x,y]), res)
+                neigh = (x,y)
                 
                 # Skip node coords
                 if tuple(neigh) == tuple(self.position):
@@ -74,7 +66,7 @@ class Node():
 
                 # Check bounds
                 if bounds[0][0] <= neigh[0] < bounds[0][1] and bounds[1][0] <= neigh [1] < bounds[1][1]:
-                    neighbors.append(tuple(neigh))
+                    neighbors.append(neigh)
 
         return neighbors
 
@@ -94,22 +86,30 @@ class Node():
         return f"Node(position={self.position} fcost={self.fcost} gcost={self.gcost} hcost={self.hcost})"
 
 
-def a_star(start, goal, bounds, res, obstacles):
+def a_star(start_f, goal_f, bounds_f, res, obstacles_f, return_float=True):
     """
     Use A* path finding to determine the best path from a start to a goal.
 
     Args:
-        start: Starting position of robot
-        goal: Goal position
-        bounds: Gridworld bounds
-        obstacles: Set of obstacle locations, rounded to Gridworld resolution
+        start_f: Starting position of robot
+        goal_f: Goal position
+        bounds_f: Gridworld bounds
+        res: Grid resolution
+        obstacles_f: Set of obstacle locations, rounded to Gridworld resolution
+        return_float: Whether to return path in internal int representation or final
+                      true units.
     """
-    # Round to given resolution
-    start, goal = round_to_res(start, res), round_to_res(goal, res)
+    # Convert real coords into integer representations
+    start, goal = pos_to_grid(start_f, res), pos_to_grid(goal_f, res)
+    obstacles = set(pos_to_grid(o, res) for o in obstacles_f)
+    bounds = np.array([
+        pos_to_grid(bounds_f[0], res),
+        pos_to_grid(bounds_f[1], res)
+    ])
 
     # Heuristic cost is Euclidean distance
     def h(node):
-        return np.linalg.norm(goal - node)
+        return np.linalg.norm(np.array(goal) - np.array(node))
     
     # Initialization
     open_heap = []           # To be evaluated, heapq
@@ -122,9 +122,9 @@ def a_star(start, goal, bounds, res, obstacles):
     # Add starting node to open set
     start_node = Node(start, parent=None, obs=False)
     start_node.set_cost(0, h(start))
-    node_lookup[tuple(start)] = start_node
+    node_lookup[start] = start_node
     heapq.heappush(open_heap, start_node)
-    open_set.add(tuple(start))
+    open_set.add(start)
 
     found = False
     current = start
@@ -133,7 +133,9 @@ def a_star(start, goal, bounds, res, obstacles):
         test_iter += 1  # DEBUG
         # Get node in open set with lowest f cost
         current = heapq.heappop(open_heap)
-        curr_pos = tuple(round_to_res(current.position, res))
+        # curr_pos = tuple(round_to_res(current.position, res))
+        curr_pos = current.position
+        if curr_pos in closed: continue
         open_set.remove(curr_pos)
         closed.add(curr_pos)
 
@@ -145,39 +147,40 @@ def a_star(start, goal, bounds, res, obstacles):
         # Iterate over neighbors of current
         neighbors = current.get_neighbor_coords(bounds, res)
         for neigh in neighbors:
-            neigh = round_to_res(neigh, res)
-            if tuple(neigh) in closed: continue
+            # neigh = round_to_res(neigh, res)
+            if neigh in closed: continue
             
             # Calculate gcost, hcost, and fcost based on current
-            obs = tuple(neigh) in obstacles
+            obs = neigh in obstacles
             if obs: neigh_gcost = current.gcost + obs_cost
             else: neigh_gcost = current.gcost + move_cost
             neigh_hcost = h(neigh)
 
             # If neighbor in set AND new f cost of neighbor is lower OR neighbor not in set
-            if tuple(neigh) not in node_lookup: neigh_node = Node(neigh, parent=current, obs=obs)
-            else: neigh_node = node_lookup[tuple(neigh)]
-            if (tuple(neigh) in open_set and neigh_gcost < node_lookup[tuple(neigh)].gcost) or\
-                tuple(neigh) not in open_set:
+            if neigh not in node_lookup: neigh_node = Node(neigh, parent=current, obs=obs)
+            else: neigh_node = node_lookup[neigh]
+            if (neigh in open_set and neigh_gcost < node_lookup[neigh].gcost) or\
+                neigh not in open_set:
                 # Update node lookup and add (or re-add) neighbor to open set
                 neigh_node.parent = current
                 neigh_node.set_cost(neigh_gcost, neigh_hcost)
                 heapq.heappush(open_heap, neigh_node)
-                open_set.add(tuple(neigh))
-                node_lookup[tuple(neigh)] = neigh_node
+                open_set.add(neigh)
+                node_lookup[neigh] = neigh_node
 
     path = []
     if found:
-        current = node_lookup[tuple(goal)]
+        current = node_lookup[goal]
         while current is not None:
             path.append(tuple(current.position))
             current = current.parent
 
         path.reverse()
 
+    if return_float: path = [grid_to_pos(p, res) for p in path]
     return path
 
-def a_star_online(start, goal, bounds, res, obstacles):
+def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
     """
     Use A* path finding to determine the best path from a start to a goal, planning
     online to avoid obstacles.
@@ -189,7 +192,13 @@ def a_star_online(start, goal, bounds, res, obstacles):
         obstacles: np.ndarray of obstacle locations, rounded to Gridworld resolution
     """
     # Initialization
-    start, goal = round_to_res(start, res), round_to_res(goal, res)
+    start, goal = pos_to_grid(start_f, res), pos_to_grid(goal_f, res)
+    start, goal = pos_to_grid(start_f, res), pos_to_grid(goal_f, res)
+    obstacles = set(pos_to_grid(o, res) for o in obstacles_f)
+    bounds = np.array([
+        pos_to_grid(bounds_f[0], res),
+        pos_to_grid(bounds_f[1], res)
+    ])
     path = [tuple(start)]
     known_obstacles = set() # Start without known obstacles
 
@@ -197,8 +206,8 @@ def a_star_online(start, goal, bounds, res, obstacles):
 
     # Continue until goal is reached
     current = start
-    while not (current == goal).all():
-        naive_path = a_star(current, goal, bounds, res, known_obstacles)
+    while not current == goal:
+        naive_path = a_star(current, goal, bounds, res, known_obstacles, return_float=False)
         if not naive_path: break  # No path found
 
         # Follow naive path
