@@ -64,14 +64,17 @@ def plot_grid(bounds, res, obstacles, title=None):
         ax.add_patch(rect)
 
     # Set up grid
+    ax.set_xticks(x_range)
+    ax.set_yticks(y_range)
+    ax.grid(color='black', linewidth=0.4)
 
     # Set up axis labels
     if res >= 0.5:
         ax.set_xticklabels(x_range)
         ax.set_yticklabels(y_range)
-    ax.set_xticks(x_range)
-    ax.set_yticks(y_range)
-    ax.grid(color='black', linewidth=0.4)
+    else:
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
     ax.set_xlabel('X Coordinate')
     ax.set_ylabel('Y Coordinate')
     ax.set_aspect('equal')
@@ -222,5 +225,31 @@ def q6():
     goal = np.array([4, 5])
     path = a_star(start, goal, bounds, res, obstacles)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online A* Search - res={res}', 'q6.png')
+
+    print("Done\n")
+
+def q7():
+    print("Running question 7...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 0.1
+    obstacles = get_obstacles(bounds, res, inflate=3)
+
+    start = round_to_res(np.array([2.45, -3.55]), res)
+    goal = round_to_res(np.array([0.95, -1.55]), res)
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online A* Search - res={res}', 'q7a.png')
+
+    start = round_to_res(np.array([4.95, -0.05]), res)
+    goal = round_to_res(np.array([2.45, 0.25]), res)
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online A* Search - res={res}', 'q7b.png')
+
+    start = round_to_res(np.array([-0.55, 1.45]), res)
+    goal = round_to_res(np.array([1.95, 3.95]), res)
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online A* Search - res={res}', 'q7c.png')
 
     print("Done\n")

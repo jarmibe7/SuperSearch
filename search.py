@@ -9,6 +9,9 @@ Date: 10/11/2025
 import numpy as np
 import heapq
 
+#
+# --- Grid Representation ---
+#
 def pos_to_grid(pos, res):
     """
     Convert from orig units to internal integer representation
@@ -29,6 +32,9 @@ def round_to_res(n, res):
     else: n_arr = n
     return np.round(np.floor(n_arr / res)*res, 1)   # TODO: Better way of eliminating floating point
 
+#
+# --- A* ---
+#
 class Node():
     """
     A node in an A* search graph.
@@ -48,23 +54,13 @@ class Node():
         self.gcost = np.inf
         self.hcost = np.inf
 
-    def round_neighbor_to_res(self, n, res):
-        """
-        Rounding for neighbors should round to closest resolution interval
-        instead of rounding down.
-        """
-        return np.round(np.round(n / res)*res, 1)
-
     def get_neighbor_coords(self, bounds, res):
         neighbors = []
 
         # Cover full immediate neighborhood
         for dx in range(-1, 2):
             for dy in range(-1, 2):
-                x, y = (self.position[0] + dx), (self.position[1] + dy)
-
-                # neigh = self.round_neighbor_to_res(np.array([x,y]), res)
-                neigh = (x,y)
+                neigh = (self.position[0] + dx, self.position[1] + dy)
                 
                 # Skip node coords
                 if tuple(neigh) == tuple(self.position):
@@ -92,7 +88,13 @@ class Node():
         return f"Node(position={self.position} fcost={self.fcost} gcost={self.gcost} hcost={self.hcost})"
 
 
-def a_star(start_f, goal_f, bounds_f, res, obstacles_f, return_float=True):
+def a_star(start_rep, 
+           goal_rep, 
+           bounds_rep, 
+           res, 
+           obstacles_f, 
+           online=False,
+           obstacles_i=None):
     """
     Use A* path finding to determine the best path from a start to a goal.
 
@@ -101,17 +103,25 @@ def a_star(start_f, goal_f, bounds_f, res, obstacles_f, return_float=True):
         goal_f: Goal position
         bounds_f: Gridworld bounds
         res: Grid resolution
-        obstacles_f: Set of obstacle locations, rounded to Gridworld resolution
-        return_float: Whether to return path in internal int representation or final
-                      true units.
+        obstacles_f: Set of obstacle locations, rounded to Gridworld resolution. This
+                     param is always needed, for resolving floating point error.
+        online: Whether to return path in internal int representation or final
+                true units, and expect the same for obstacle inputs.
+        obstacles_i: If online, pass inputs in integer form as well 
     """
     # Convert real coords into integer representations
-    start, goal = pos_to_grid(start_f, res), pos_to_grid(goal_f, res)
-    obstacles = set(pos_to_grid(o, res) for o in obstacles_f)
-    bounds = np.array([
-        pos_to_grid(bounds_f[0], res),
-        pos_to_grid(bounds_f[1], res)
-    ])
+    if online: 
+        # If running online, integer rep is passed in
+        start, goal = start_rep, goal_rep
+        obstacles = obstacles_i
+        bounds = bounds_rep
+    else: 
+        start, goal = pos_to_grid(start_rep, res), pos_to_grid(goal_rep, res)
+        obstacles = set(pos_to_grid(o, res) for o in obstacles_f)
+        bounds = np.array([
+            pos_to_grid(bounds_rep[0], res),
+            pos_to_grid(bounds_rep[1], res)
+        ])
 
     # Heuristic cost is Euclidean distance
     def h(node):
@@ -134,12 +144,9 @@ def a_star(start_f, goal_f, bounds_f, res, obstacles_f, return_float=True):
 
     found = False
     current = start
-    test_iter = 0   # DEBUG
     while open_heap:
-        test_iter += 1  # DEBUG
         # Get node in open set with lowest f cost
         current = heapq.heappop(open_heap)
-        # curr_pos = tuple(round_to_res(current.position, res))
         curr_pos = current.position
         if curr_pos in closed: continue
         open_set.remove(curr_pos)
@@ -153,7 +160,6 @@ def a_star(start_f, goal_f, bounds_f, res, obstacles_f, return_float=True):
         # Iterate over neighbors of current
         neighbors = current.get_neighbor_coords(bounds, res)
         for neigh in neighbors:
-            # neigh = round_to_res(neigh, res)
             if neigh in closed: continue
             
             # Calculate gcost, hcost, and fcost based on current
@@ -184,7 +190,7 @@ def a_star(start_f, goal_f, bounds_f, res, obstacles_f, return_float=True):
 
         path.reverse()
 
-    if return_float: path = [grid_to_pos(p, res) for p in path]
+    if not online: path = [grid_to_pos(p, res) for p in path]
     return path
 
 def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
@@ -200,28 +206,30 @@ def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
     """
     # Initialization
     start, goal = pos_to_grid(start_f, res), pos_to_grid(goal_f, res)
-    start, goal = pos_to_grid(start_f, res), pos_to_grid(goal_f, res)
     obstacles = set(pos_to_grid(o, res) for o in obstacles_f)
     bounds = np.array([
         pos_to_grid(bounds_f[0], res),
         pos_to_grid(bounds_f[1], res)
     ])
     path = [tuple(start)]
-    known_obstacles = set() # Start without known obstacles
+    known_obstacles_i = set()     # Start without known obstacles
+    known_obstacles_f = set()   # Needed to prevent floating point errors
 
     if tuple(start) in obstacles: return path
 
     # Continue until goal is reached
     current = start
     while not current == goal:
-        naive_path = a_star(current, goal, bounds, res, known_obstacles, return_float=False)
+        naive_path = a_star(current, goal, bounds, res, known_obstacles_f, 
+                            online=True, obstacles_i=known_obstacles_i)
         if not naive_path: break  # No path found
 
         # Follow naive path
         for node in naive_path[1:]: # First node in path is last node of prev path
             # If node on naive path is obstacle, add to known_obstacles and replan
-            if node in obstacles:
-                known_obstacles.add(node)
+            if node in obstacles or (tuple(grid_to_pos(node, res)) in obstacles_f):
+                known_obstacles_i.add(node)
+                known_obstacles_f.add(tuple(grid_to_pos(node, res)))
                 # TODO: Check all neighbors of current for obstacles as well
                 break
             else:
@@ -229,5 +237,6 @@ def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
                 current = node
                 path.append(current)
 
+    path = [grid_to_pos(p, res) for p in path]
     return path
 
