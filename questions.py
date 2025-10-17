@@ -18,6 +18,10 @@ PLOT_PATH = os.path.join(__file__, "..\\figures")
 DATA_PATH = os.path.join(__file__, "..\\data")
 METRICS_PATH = os.path.join(__file__, "..\\metrics")
 
+#
+# --- Plotting ---
+#
+
 def plot_search(start, goal, path, bounds, res, obstacles, title, filename):
     fig, ax = plot_grid(bounds, res, obstacles, title)
 
@@ -113,6 +117,10 @@ def get_obstacles(bounds, res, inflate=0):
                     landmarks_rounded.add(tuple(l_inf))
 
     return landmarks_rounded
+
+#
+# --- Questions ---
+#
 
 def q1():
     print("Running question 1...", end="", flush=True)
