@@ -47,7 +47,7 @@ def plot_search(start, goal, path, bounds, res, obstacles, title, filename, traj
     ax.add_patch(goal_rect)
 
     if traj is not None:
-        ax.plot(traj[:,0], traj[:,1], color='black')
+        ax.plot(traj[:,0], traj[:,1], color='black', linewidth=4)
 
     fig_path = os.path.join(PLOT_PATH, filename)
     plt.savefig(fig_path)
@@ -272,7 +272,7 @@ def q8():
         [-2, 5],    # x bounds
         [-6, 6]     # y bounds
     ]
-    res = 1.0
+    res = 0.1
 
     obstacles = get_obstacles(bounds, res, inflate=3)
 
