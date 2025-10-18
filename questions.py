@@ -13,6 +13,7 @@ import matplotlib.patches as patches
 import os
 
 from search import round_to_res, a_star, a_star_online
+from motion import a_star_to_kspline, sim_rk4
 
 PLOT_PATH = os.path.join(__file__, "..\\figures")
 DATA_PATH = os.path.join(__file__, "..\\data")
@@ -22,7 +23,7 @@ METRICS_PATH = os.path.join(__file__, "..\\metrics")
 # --- Plotting ---
 #
 
-def plot_search(start, goal, path, bounds, res, obstacles, title, filename):
+def plot_search(start, goal, path, bounds, res, obstacles, title, filename, traj=None):
     fig, ax = plot_grid(bounds, res, obstacles, title)
 
     # Plot path
@@ -41,9 +42,12 @@ def plot_search(start, goal, path, bounds, res, obstacles, title, filename):
     ax.add_patch(start_rect)
     goal_rect = patches.Rectangle(
         (goal[0], goal[1]), res, res,
-        facecolor='green', edgecolor='black'
+        facecolor='green', edgecolor='blue'
     )
     ax.add_patch(goal_rect)
+
+    if traj is not None:
+        ax.plot(traj[:,0], traj[:,1], color='black')
 
     fig_path = os.path.join(PLOT_PATH, filename)
     plt.savefig(fig_path)
@@ -259,5 +263,31 @@ def q7():
     goal = round_to_res(np.array([1.95, 3.95]), res)
     path = a_star_online(start, goal, bounds, res, obstacles)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online A* Search - res={res}', 'q7c.png')
+
+    print("Done\n")
+
+def q8():
+    print("Running question 8...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 1.0
+
+    obstacles = get_obstacles(bounds, res, inflate=3)
+
+    # Compute A* path
+    start = np.array([-2, -6])
+    goal = np.array([4, 5])
+    a_star_path = a_star(start, goal, bounds, res, obstacles)
+
+    # Controller gains and timestep
+    kv = 1.0
+    kw = 1.0
+    h = 0.1
+
+    # Compute robot trajectory and plot
+    x_traj = sim_rk4(a_star_path, kv, kw, h)
+    plot_search(start, goal, a_star_path, bounds, res, obstacles, f'Interpolated Robot Path on A* Search', 'q8.png', traj=x_traj)
 
     print("Done\n")
