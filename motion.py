@@ -56,7 +56,7 @@ def step_rk4(x, u, t, h, w=None):
 
     return x + h*(k1/6.0 + k2/3.0 + k3/3.0 + k4/6.0)
 
-def sim_rk4(waypoints, kv, kw, h=0.1, interp=True):
+def sim_rk4(waypoints, kv, kw, h=0.1, interp=True, noise=0.0, thresh=1e-2):
     """
     A simulation function that computes a control law at each timestep based on a given
     path.
@@ -67,6 +67,8 @@ def sim_rk4(waypoints, kv, kw, h=0.1, interp=True):
         kw: Gain determining anglular velocity magnitude based on bearing error to desired waypoint.
         h: Simulation timestep
         interp: Whether to perform spline interpolation on the given path.
+        noise: How much noise to add to control signal
+        thresh: How close robot must get to a waypoint to set goal to next waypoint in path.
     """
     if interp:
         waypoints = a_star_to_kspline(waypoints, degree=3, num_points=500)
@@ -76,17 +78,17 @@ def sim_rk4(waypoints, kv, kw, h=0.1, interp=True):
     x0 = np.concatenate([waypoints[0], np.array([-np.pi/2])])
     x_ret = [x0]
     x_curr = x0
-    d_thresh = 5e-2     # How close robot must get to a waypoint to move on to next waypoint
     t = 0.0
     v_prev, w_prev = 0.0, 0.0
     for i, x_des in enumerate(waypoints):
-        while np.linalg.norm(x_des - x_curr[0:2]) > d_thresh:
+        while np.linalg.norm(x_des - x_curr[0:2]) > thresh:
             # Compute control signal based on path
             v = kv * np.linalg.norm(x_des - x_curr[0:2])  # Forward velocity based on distance to next waypoint
-            w = kw * (np.arctan2(x_des[1] - x_curr[1], x_des[0] - x_curr[0]) - x_curr[2])   # Angular velocity based on bearing to next wayping
+            w = kw * wrap_angle(np.arctan2(x_des[1] - x_curr[1], x_des[0] - x_curr[0]) - x_curr[2])   # Angular velocity based on bearing to next wayping
             v_lim = np.clip(v, v_prev - acc_limits[0]*h, v_prev + acc_limits[0]*h)
             w_lim = np.clip(w, w_prev - acc_limits[1]*h, w_prev + acc_limits[1]*h)
             u = np.array([v_lim, w_lim])
+            u += np.random.multivariate_normal(np.zeros(u.shape[0]), noise*np.eye(u.shape[0]))  # Add noise to control signal
 
             # Integrate next timestep
             x_curr = step_rk4(x_curr, u, t, h).copy()

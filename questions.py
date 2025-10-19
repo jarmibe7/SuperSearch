@@ -280,14 +280,36 @@ def q8():
     start = np.array([-2, -6])
     goal = np.array([4, 5])
     a_star_path = a_star(start, goal, bounds, res, obstacles)
-
-    # Controller gains and timestep
-    kv = 1.0
-    kw = 1.0
-    h = 0.1
-
-    # Compute robot trajectory and plot
-    x_traj = sim_rk4(a_star_path, kv, kw, h)
+    x_traj = sim_rk4(a_star_path, kv=1.0, kw=1.0, h=0.1, noise=1e-2, thresh=5e-1)
     plot_search(start, goal, a_star_path, bounds, res, obstacles, f'Interpolated Robot Path on A* Search', 'q8.png', traj=x_traj)
+
+    print("Done\n")
+
+def q9():
+    print("Running question 9...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 0.1
+    obstacles = get_obstacles(bounds, res, inflate=3)
+
+    start = round_to_res(np.array([2.45, -3.55]), res)
+    goal = round_to_res(np.array([0.95, -1.55]), res)
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    x_traj = sim_rk4(path, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=5e-2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Interpolated Robot Path on A* Search', 'q9a.png', traj=x_traj)
+
+    start = round_to_res(np.array([4.95, -0.05]), res)
+    goal = round_to_res(np.array([2.45, 0.25]), res)
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    x_traj = sim_rk4(path, kv=1.0, kw=1.0, h=0.1, noise=0.01, thresh=5e-2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Interpolated Robot Path on A* Search', 'q9b.png', traj=x_traj)
+
+    start = round_to_res(np.array([-0.55, 1.45]), res)
+    goal = round_to_res(np.array([1.95, 3.95]), res)
+    path = a_star_online(start, goal, bounds, res, obstacles)
+    x_traj = sim_rk4(path, kv=1.0, kw=1.0, h=0.1, noise=0.01, thresh=5e-2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Interpolated Robot Path on A* Search', 'q9c.png', traj=x_traj)
 
     print("Done\n")
