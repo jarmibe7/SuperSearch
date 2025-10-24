@@ -226,7 +226,7 @@ def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
     current = start
     while not current == goal:
         naive_path = a_star(current, goal, bounds, res, known_obstacles_f, 
-                            mode='offline', obstacles_i=known_obstacles_i)
+                            mode='online', obstacles_i=known_obstacles_i)
         if not naive_path: break  # No path found
 
         # Follow naive path
