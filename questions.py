@@ -343,17 +343,17 @@ def q11():
 
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11a.png', traj=x_traj)
 
     start = round_to_res(np.array([4.5, 3.5]), res)
     goal = round_to_res(np.array([4.5, -1.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11b.png', traj=x_traj)
 
     start = round_to_res(np.array([-0.5, 5.5]), res)
     goal = round_to_res(np.array([1.5, -3.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11c.png', traj=x_traj)
 
     res = 1.0

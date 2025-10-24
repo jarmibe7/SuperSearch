@@ -245,7 +245,7 @@ def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
     path = [grid_to_pos(p, res) for p in path]
     return path
 
-def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, noise=0.0, thresh=1e-2, interp=False):
+def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, noise=0.0, thresh=1e-2, interp=False, obs_avoid=False):
     """
     Use A* path finding to determine the best path from a start to a goal, planning
     online to avoid obstacles.
@@ -261,6 +261,7 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
         noise: How much noise to add to control signal
         thresh: How close robot must get to a waypoint to set goal to next waypoint in path.
         interp: Whether to interpolate between waypoints
+        obs_avoid: Whether to employ extra obstacle avoidance measures
     """
     # A* initialization
     start, goal = pos_to_grid(start_f, res), pos_to_grid(goal_f, res)
@@ -307,8 +308,8 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
                 # Optionally interoplate between current and starting point
                 x_next = grid_to_pos(node, res)
                 if interp: 
-                    x_des_x = np.linspace(x_curr[0], x_next[0], num=10)
-                    x_des_y = np.linspace(x_curr[1], x_next[1], num=10)
+                    x_des_x = np.linspace(x_curr[0], x_next[0], num=30)
+                    x_des_y = np.linspace(x_curr[1], x_next[1], num=30)
                     x_des_traj = np.vstack([x_des_x, x_des_y]).T
                 else:
                     x_des_traj = [x_next]
@@ -316,13 +317,23 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
                 # Move to next via point
                 for x_des in x_des_traj:
                     while np.linalg.norm(x_des - x_curr[0:2]) > thresh:
-                        # Compute potential field based on obstacles
-                        if known_obstacles_f:
-                            vecs_to_obstacles = [o - x_curr[0:2] for o in known_obstacles_f]
-                            dist_to_obstacles = np.linalg.norm(np.array(vecs_to_obstacles), axis=1)
+                        # Compute potential field based on known obstacles
+                        if obs_avoid and known_obstacles_f:
+                            des_vecs_to_obstacles = np.array([o - x_des for o in known_obstacles_f])
+                            des_dist_to_obstacles = np.linalg.norm(des_vecs_to_obstacles, axis=1)
+                            des_vecs_to_obstacles /= des_dist_to_obstacles.reshape((des_dist_to_obstacles.shape[0], 1))
+                            des_nearby_obs_mask = des_dist_to_obstacles < res
+                            for vec, dist in zip(des_vecs_to_obstacles[des_nearby_obs_mask], des_dist_to_obstacles[des_nearby_obs_mask]):
+                                x_des -= res*vec
+                            
+                            # Get vectors to obstacles
+                            vecs_to_obstacles = np.array([o - x_curr[0:2] for o in known_obstacles_f])
+                            dist_to_obstacles = np.linalg.norm(vecs_to_obstacles, axis=1)
+                            vecs_to_obstacles /= dist_to_obstacles.reshape((dist_to_obstacles.shape[0], 1))
                             nearby_obs_mask = dist_to_obstacles < res
-                            for near_obs in known_obstacles_f[nearby_obs_mask]:
-                                pass
+                            v_vec = x_des - x_curr[0:2]
+                            for vec, dist in zip(vecs_to_obstacles[nearby_obs_mask], dist_to_obstacles[nearby_obs_mask]):
+                                v_vec -= 0.09*(1/dist)*vec
                         else:
                             v_vec = x_des - x_curr[0:2]
 
