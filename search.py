@@ -10,29 +10,7 @@ import numpy as np
 import heapq
 
 from motion import wrap_angle, step_rk4
-
-#
-# --- Grid Representation ---
-#
-def pos_to_grid(pos, res):
-    """
-    Convert from orig units to internal integer representation
-    """
-    return tuple(np.floor(np.array(pos) / res).astype(int))
-
-def grid_to_pos(grid, res):
-    """
-    Convert from integer rep back to orig units
-    """
-    return np.round(np.array(grid)*res, 1)
-
-def round_to_res(n, res):
-    """
-    Given a number or np.ndarray of numbers, round to a given resolution.
-    """
-    if isinstance(n, tuple): n_arr = np.array(n)
-    else: n_arr = n
-    return np.round(np.floor(n_arr / res)*res, 1)   # TODO: Better way of eliminating floating point
+from utils import inflate_obstacles, round_to_res, pos_to_grid, grid_to_pos
 
 #
 # --- A* ---
@@ -117,7 +95,8 @@ def a_star(start_rep,
         obstacles = obstacles_i
         bounds = bounds_rep
     elif mode == 'real':
-        start, goal = pos_to_grid(start_rep, res), goal_rep
+        start, goal = start_rep, goal_rep
+        # start, goal = pos_to_grid(start_rep, res), goal_rep
         obstacles = obstacles_i
         bounds = bounds_rep
     else: 
@@ -274,6 +253,10 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
     known_obstacles_i = set()     # Start without known obstacles
     known_obstacles_f = set()   # Needed to prevent floating point errors
 
+    # A* planning and control resolutions are different
+    a_res = res
+    res = min(res, 0.1)
+
     # Simulation initialization
     acc_limits = np.array([0.288, 5.5579])
     x0 = np.concatenate([start_f, np.array([-np.pi/2])])
@@ -288,16 +271,16 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
     x_curr = x0         # Current true state
     while not current == goal:
         # Plan a naive path with known obstacls
-        naive_path = a_star(x_curr[:2], goal, bounds, res, known_obstacles_f, 
+        naive_path = a_star(current, goal, bounds, a_res, known_obstacles_f, 
                             mode='real', obstacles_i=known_obstacles_i)
         if not naive_path: break  # No path found
 
         # Check if next node is an obstacle
         for node in naive_path[1:]: # First node in path is last node of prev path
             # If node on naive path is obstacle, add to known_obstacles and replan
-            if node in obstacles or (tuple(grid_to_pos(node, res)) in obstacles_f):
+            if node in obstacles or (tuple(grid_to_pos(node, a_res)) in obstacles_f):
                 known_obstacles_i.add(node)
-                known_obstacles_f.add(tuple(grid_to_pos(node, res)))
+                known_obstacles_f.add(tuple(grid_to_pos(node, a_res)))
                 # TODO: Check all neighbors of current for obstacles as well
                 break
             else:
@@ -306,7 +289,7 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
                 path.append(node)
 
                 # Optionally interoplate between current and starting point
-                x_next = grid_to_pos(node, res)
+                x_next = grid_to_pos(node, a_res)
                 if interp: 
                     x_des_x = np.linspace(x_curr[0], x_next[0], num=30)
                     x_des_y = np.linspace(x_curr[1], x_next[1], num=30)
@@ -314,12 +297,18 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
                 else:
                     x_des_traj = [x_next]
 
+                # Inflate obstacles in control resolution grid if using coarse resolution
+                if res < a_res and known_obstacles_i:
+                    known_obstacles_col = inflate_obstacles(bounds, res, np.array(list(known_obstacles_i)) + a_res/2, inflate=3)
+                else:
+                    known_obstacles_col = known_obstacles_f
+
                 # Move to next via point
                 for x_des in x_des_traj:
                     while np.linalg.norm(x_des - x_curr[0:2]) > thresh:
                         # Compute potential field based on known obstacles
-                        if obs_avoid and known_obstacles_f:
-                            des_vecs_to_obstacles = np.array([o - x_des for o in known_obstacles_f])
+                        if obs_avoid and known_obstacles_col:
+                            des_vecs_to_obstacles = np.array([o - x_des for o in known_obstacles_col])
                             des_dist_to_obstacles = np.linalg.norm(des_vecs_to_obstacles, axis=1)
                             des_vecs_to_obstacles /= des_dist_to_obstacles.reshape((des_dist_to_obstacles.shape[0], 1))
                             des_nearby_obs_mask = des_dist_to_obstacles < res
@@ -327,13 +316,13 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
                                 x_des -= res*vec
                             
                             # Get vectors to obstacles
-                            vecs_to_obstacles = np.array([o - x_curr[0:2] for o in known_obstacles_f])
+                            vecs_to_obstacles = np.array([o - x_curr[0:2] for o in known_obstacles_col])
                             dist_to_obstacles = np.linalg.norm(vecs_to_obstacles, axis=1)
                             vecs_to_obstacles /= dist_to_obstacles.reshape((dist_to_obstacles.shape[0], 1))
                             nearby_obs_mask = dist_to_obstacles < res
                             v_vec = x_des - x_curr[0:2]
                             for vec, dist in zip(vecs_to_obstacles[nearby_obs_mask], dist_to_obstacles[nearby_obs_mask]):
-                                v_vec -= 0.09*(1/dist)*vec
+                                v_vec -= 0.05*(1/(dist*res))*vec
                         else:
                             v_vec = x_des - x_curr[0:2]
 
@@ -355,5 +344,5 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
                         v_prev = v_lim
                         w_prev = w_lim
 
-    path = [grid_to_pos(p, res) for p in path]
+    path = [grid_to_pos(p, a_res) for p in path]
     return path, np.array(x_ret)

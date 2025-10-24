@@ -12,8 +12,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
 
-from search import round_to_res, a_star, a_star_online, a_star_real
+from search import a_star, a_star_online, a_star_real
 from motion import a_star_to_kspline, sim_rk4
+from utils import get_obstacles, round_to_res
 
 PLOT_PATH = os.path.join(__file__, "..\\figures")
 DATA_PATH = os.path.join(__file__, "..\\data")
@@ -96,32 +97,6 @@ def plot_grid(bounds, res, obstacles, title=None):
         ax.set_title(title)
 
     return fig, ax
-
-def get_obstacles(bounds, res, inflate=0):
-    """
-    Inflate is the number of cells to inflate in each direction
-    """
-    # Read ground truth landmark data
-    landmarks_truth_data_path = os.path.join(DATA_PATH, 'ds1_Landmark_Groundtruth.dat')
-    landmarks_truth = pd.read_csv(landmarks_truth_data_path, sep=r"\s+", comment="#", header=None, names=["subject", "x", "y", "x_sig", "y_sig"])
-    landmarks = landmarks_truth.to_numpy()[:, 1:3]
-     
-    # Plot landmarks
-    landmarks_rounded = set()  # Set of landmarks
-    # Inflate landmark by inflate number of cells
-    for l in landmarks:
-        # Cover full square of size (inflate)
-        for dx in range(-inflate, inflate + 1):
-            for dy in range(-inflate, inflate + 1):
-                x, y = (l[0] + dx * res), (l[1] + dy * res)
-
-                l_inf = round_to_res(np.array([x,y]), res)
-
-                # Check bounds
-                if bounds[0][0] <= l_inf[0] < bounds[0][1] and bounds[1][0] <= l_inf[1] < bounds[1][1]:
-                    landmarks_rounded.add(tuple(l_inf))
-
-    return landmarks_rounded
 
 #
 # --- Questions ---
@@ -342,19 +317,21 @@ def q11():
     res = 0.1
     obstacles = get_obstacles(bounds, res, inflate=3)
 
+    noi = 1e-2
+
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2, interp=True)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11a.png', traj=x_traj)
 
     start = round_to_res(np.array([4.5, 3.5]), res)
     goal = round_to_res(np.array([4.5, -1.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2, interp=True)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11b.png', traj=x_traj)
 
     start = round_to_res(np.array([-0.5, 5.5]), res)
     goal = round_to_res(np.array([1.5, -3.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2, interp=True)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11c.png', traj=x_traj)
 
     res = 1.0
@@ -362,17 +339,17 @@ def q11():
 
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2, interp=True)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11d.png', traj=x_traj)
 
     start = round_to_res(np.array([4.5, 3.5]), res)
     goal = round_to_res(np.array([4.5, -1.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11e.png', traj=x_traj)
 
     start = round_to_res(np.array([-0.5, 5.5]), res)
     goal = round_to_res(np.array([1.5, -3.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11f.png', traj=x_traj)
 
     print("Done\n")
