@@ -245,7 +245,7 @@ def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
     path = [grid_to_pos(p, res) for p in path]
     return path
 
-def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, noise=0.0, thresh=1e-2, interp=False, obs_avoid=False):
+def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, noise=0.0, thresh=1e-2, interp=False, obs_avoid=True):
     """
     Use A* path finding to determine the best path from a start to a goal, planning
     online to avoid obstacles.

@@ -51,6 +51,7 @@ def plot_search(start, goal, path, bounds, res, obstacles, title, filename, traj
 
     fig_path = os.path.join(PLOT_PATH, filename)
     plt.savefig(fig_path)
+    plt.close()
 
 def plot_grid(bounds, res, obstacles, title=None):
     # Create figure
