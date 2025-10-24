@@ -9,6 +9,8 @@ Date: 10/11/2025
 import numpy as np
 import heapq
 
+from motion import wrap_angle, step_rk4
+
 #
 # --- Grid Representation ---
 #
@@ -93,7 +95,7 @@ def a_star(start_rep,
            bounds_rep, 
            res, 
            obstacles_f, 
-           online=False,
+           mode='offline',
            obstacles_i=None):
     """
     Use A* path finding to determine the best path from a start to a goal.
@@ -105,14 +107,17 @@ def a_star(start_rep,
         res: Grid resolution
         obstacles_f: Set of obstacle locations, rounded to Gridworld resolution. This
                      param is always needed, for resolving floating point error.
-        online: Whether to return path in internal int representation or final
-                true units, and expect the same for obstacle inputs.
-        obstacles_i: If online, pass inputs in integer form as well 
+        mode: What mode is it being run in - offline | online | real
+        obstacles_i: If online or real, pass inputs in integer form as well 
     """
     # Convert real coords into integer representations
-    if online: 
+    if mode == 'online': 
         # If running online, integer rep is passed in
         start, goal = start_rep, goal_rep
+        obstacles = obstacles_i
+        bounds = bounds_rep
+    elif mode == 'real':
+        start, goal = pos_to_grid(start_rep, res), goal_rep
         obstacles = obstacles_i
         bounds = bounds_rep
     else: 
@@ -190,7 +195,7 @@ def a_star(start_rep,
 
         path.reverse()
 
-    if not online: path = [grid_to_pos(p, res) for p in path]
+    if mode == 'offline': path = [grid_to_pos(p, res) for p in path]
     return path
 
 def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
@@ -221,7 +226,7 @@ def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
     current = start
     while not current == goal:
         naive_path = a_star(current, goal, bounds, res, known_obstacles_f, 
-                            online=True, obstacles_i=known_obstacles_i)
+                            mode='offline', obstacles_i=known_obstacles_i)
         if not naive_path: break  # No path found
 
         # Follow naive path
@@ -240,3 +245,104 @@ def a_star_online(start_f, goal_f, bounds_f, res, obstacles_f):
     path = [grid_to_pos(p, res) for p in path]
     return path
 
+def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, noise=0.0, thresh=1e-2, interp=False):
+    """
+    Use A* path finding to determine the best path from a start to a goal, planning
+    online to avoid obstacles.
+
+    Args:
+        start: Starting position of robot
+        goal: Goal position
+        bounds: Gridworld bounds
+        obstacles: np.ndarray of obstacle locations, rounded to Gridworld resolution
+        kv: Gain determining forward velocity magnitude based on position error to desired waypoint.
+        kw: Gain determining anglular velocity magnitude based on bearing error to desired waypoint.
+        h: Simulation timestep
+        noise: How much noise to add to control signal
+        thresh: How close robot must get to a waypoint to set goal to next waypoint in path.
+        interp: Whether to interpolate between waypoints
+    """
+    # A* initialization
+    start, goal = pos_to_grid(start_f, res), pos_to_grid(goal_f, res)
+    obstacles = set(pos_to_grid(o, res) for o in obstacles_f)
+    bounds = np.array([
+        pos_to_grid(bounds_f[0], res),
+        pos_to_grid(bounds_f[1], res)
+    ])
+    path = [tuple(start)]
+    known_obstacles_i = set()     # Start without known obstacles
+    known_obstacles_f = set()   # Needed to prevent floating point errors
+
+    # Simulation initialization
+    acc_limits = np.array([0.288, 5.5579])
+    x0 = np.concatenate([start_f, np.array([-np.pi/2])])
+    x_ret = [x0]
+    t = 0.0
+    v_prev, w_prev = 0.0, 0.0
+
+    if tuple(start) in obstacles: return path
+
+    # Continue until goal is reached
+    current = start     # Current node in path
+    x_curr = x0         # Current true state
+    while not current == goal:
+        # Plan a naive path with known obstacls
+        naive_path = a_star(x_curr[:2], goal, bounds, res, known_obstacles_f, 
+                            mode='real', obstacles_i=known_obstacles_i)
+        if not naive_path: break  # No path found
+
+        # Check if next node is an obstacle
+        for node in naive_path[1:]: # First node in path is last node of prev path
+            # If node on naive path is obstacle, add to known_obstacles and replan
+            if node in obstacles or (tuple(grid_to_pos(node, res)) in obstacles_f):
+                known_obstacles_i.add(node)
+                known_obstacles_f.add(tuple(grid_to_pos(node, res)))
+                # TODO: Check all neighbors of current for obstacles as well
+                break
+            else:
+                # Otherwise, continue on planned path
+                current = node
+                path.append(node)
+
+                # Optionally interoplate between current and starting point
+                x_next = grid_to_pos(node, res)
+                if interp: 
+                    x_des_x = np.linspace(x_curr[0], x_next[0], num=10)
+                    x_des_y = np.linspace(x_curr[1], x_next[1], num=10)
+                    x_des_traj = np.vstack([x_des_x, x_des_y]).T
+                else:
+                    x_des_traj = [x_next]
+
+                # Move to next via point
+                for x_des in x_des_traj:
+                    while np.linalg.norm(x_des - x_curr[0:2]) > thresh:
+                        # Compute potential field based on obstacles
+                        if known_obstacles_f:
+                            vecs_to_obstacles = [o - x_curr[0:2] for o in known_obstacles_f]
+                            dist_to_obstacles = np.linalg.norm(np.array(vecs_to_obstacles), axis=1)
+                            nearby_obs_mask = dist_to_obstacles < res
+                            for near_obs in known_obstacles_f[nearby_obs_mask]:
+                                pass
+                        else:
+                            v_vec = x_des - x_curr[0:2]
+
+                        # Compute control signal based on path
+                        v = kv * np.linalg.norm(v_vec)  # Forward velocity based on distance to next waypoint
+                        w = kw * wrap_angle(np.arctan2(v_vec[1], v_vec[0]) - x_curr[2])   # Angular velocity based on bearing to next wayping
+                        v_lim = np.clip(v, v_prev - acc_limits[0]*h, v_prev + acc_limits[0]*h)
+                        w_lim = np.clip(w, w_prev - acc_limits[1]*h, w_prev + acc_limits[1]*h)
+                        u = np.array([v_lim, w_lim])
+                        u += np.random.multivariate_normal(np.zeros(u.shape[0]), noise*np.eye(u.shape[0]))  # Add noise to control signal
+
+                        # Integrate next timestep
+                        x_curr = step_rk4(x_curr, u, t, h).copy()
+                        x_curr[2] = wrap_angle(x_curr[2])
+                        x_ret.append(x_curr)
+
+                        # Update time and previous controls
+                        t += h
+                        v_prev = v_lim
+                        w_prev = w_lim
+
+    path = [grid_to_pos(p, res) for p in path]
+    return path, np.array(x_ret)

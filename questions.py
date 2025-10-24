@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
 
-from search import round_to_res, a_star, a_star_online
+from search import round_to_res, a_star, a_star_online, a_star_real
 from motion import a_star_to_kspline, sim_rk4
 
 PLOT_PATH = os.path.join(__file__, "..\\figures")
@@ -281,7 +281,7 @@ def q8():
     goal = np.array([4, 5])
     a_star_path = a_star(start, goal, bounds, res, obstacles)
     x_traj = sim_rk4(a_star_path, kv=1.0, kw=1.0, h=0.1, noise=1e-2, thresh=5e-1)
-    plot_search(start, goal, a_star_path, bounds, res, obstacles, f'Interpolated Robot Path on A* Search', 'q8.png', traj=x_traj)
+    plot_search(start, goal, a_star_path, bounds, res, obstacles, f'Interpolated Robot Path with A* Search', 'q8.png', traj=x_traj)
 
     print("Done\n")
 
@@ -298,18 +298,80 @@ def q9():
     goal = round_to_res(np.array([0.95, -1.55]), res)
     path = a_star_online(start, goal, bounds, res, obstacles)
     x_traj = sim_rk4(path, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=5e-2)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Interpolated Robot Path on A* Search', 'q9a.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Interpolated Robot Path with A* Search', 'q9a.png', traj=x_traj)
 
     start = round_to_res(np.array([4.95, -0.05]), res)
     goal = round_to_res(np.array([2.45, 0.25]), res)
     path = a_star_online(start, goal, bounds, res, obstacles)
     x_traj = sim_rk4(path, kv=1.0, kw=1.0, h=0.1, noise=0.01, thresh=5e-2)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Interpolated Robot Path on A* Search', 'q9b.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Interpolated Robot Path with A* Search', 'q9b.png', traj=x_traj)
 
     start = round_to_res(np.array([-0.55, 1.45]), res)
     goal = round_to_res(np.array([1.95, 3.95]), res)
     path = a_star_online(start, goal, bounds, res, obstacles)
     x_traj = sim_rk4(path, kv=1.0, kw=1.0, h=0.1, noise=0.01, thresh=5e-2)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Interpolated Robot Path on A* Search', 'q9c.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Interpolated Robot Path with A* Search', 'q9c.png', traj=x_traj)
+
+    print("Done\n")
+
+def q10():
+    print("Running question 10...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 0.1
+
+    obstacles = get_obstacles(bounds, res, inflate=3)
+
+    # Compute A* path
+    start = np.array([-2, -6])
+    goal = np.array([4, 5])
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.01, noise=1e-2, thresh=5e-1)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q10.png', traj=x_traj)
+
+    print("Done\n")
+
+def q11():
+    print("Running question 11...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 0.1
+    obstacles = get_obstacles(bounds, res, inflate=3)
+
+    start = round_to_res(np.array([0.5, -1.5]), res)
+    goal = round_to_res(np.array([0.5, 1.5]), res)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11a.png', traj=x_traj)
+
+    start = round_to_res(np.array([4.5, 3.5]), res)
+    goal = round_to_res(np.array([4.5, -1.5]), res)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11b.png', traj=x_traj)
+
+    start = round_to_res(np.array([-0.5, 5.5]), res)
+    goal = round_to_res(np.array([1.5, -3.5]), res)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11c.png', traj=x_traj)
+
+    res = 1.0
+    obstacles = get_obstacles(bounds, res, inflate=0)
+
+    start = round_to_res(np.array([0.5, -1.5]), res)
+    goal = round_to_res(np.array([0.5, 1.5]), res)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2, interp=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11d.png', traj=x_traj)
+
+    start = round_to_res(np.array([4.5, 3.5]), res)
+    goal = round_to_res(np.array([4.5, -1.5]), res)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11e.png', traj=x_traj)
+
+    start = round_to_res(np.array([-0.5, 5.5]), res)
+    goal = round_to_res(np.array([1.5, -3.5]), res)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.00, thresh=9e-2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11f.png', traj=x_traj)
 
     print("Done\n")
