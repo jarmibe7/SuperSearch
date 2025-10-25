@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.path as mpl_path
 import os
 
 from search import a_star, a_star_online, a_star_real
@@ -24,7 +25,7 @@ METRICS_PATH = os.path.join(__file__, "..\\metrics")
 # --- Plotting ---
 #
 
-def plot_search(start, goal, path, bounds, res, obstacles, title, filename, traj=None):
+def plot_search(start, goal, path, bounds, res, obstacles, title, filename, traj=None, display_robot=True):
     fig, ax = plot_grid(bounds, res, obstacles, title)
 
     # Plot path
@@ -38,17 +39,31 @@ def plot_search(start, goal, path, bounds, res, obstacles, title, filename, traj
     # Plot start and goal
     start_rect = patches.Rectangle(
         (start[0], start[1]), res, res,
-        facecolor='blue', edgecolor='black'
+        facecolor='purple', edgecolor='black'
     )
     ax.add_patch(start_rect)
     goal_rect = patches.Rectangle(
         (goal[0], goal[1]), res, res,
-        facecolor='green', edgecolor='blue'
+        facecolor='green', edgecolor='black'
     )
     ax.add_patch(goal_rect)
 
     if traj is not None:
         ax.plot(traj[:,0], traj[:,1], color='black', linewidth=4)
+    
+    if traj is not None and display_robot:
+        arrow = np.array([[0.1, 0.3], [0.1, -0.3], 
+                          [1.0, 0.0], [0.1, 0.3]])  # arrow shape
+        color = 'blue'
+        for i, xt in enumerate(traj):
+            if i % (traj.shape[0] // 25) == 0 or i == 0:
+                # Plot robot location and heading
+                R = np.array([[np.cos(xt[2]), np.sin(xt[2])],
+                                            [-np.sin(xt[2]), np.cos(xt[2])]])
+                arrow_rot = 2*arrow @ R
+                codes = [mpl_path.Path.MOVETO, mpl_path.Path.LINETO, mpl_path.Path.LINETO, mpl_path.Path.CLOSEPOLY]
+                arrow_head_marker = mpl_path.Path(arrow_rot, codes)
+                ax.plot(xt[0], xt[1], linestyle='', marker=arrow_head_marker, markersize=12, color=color)
 
     fig_path = os.path.join(PLOT_PATH, filename)
     plt.savefig(fig_path)
@@ -88,6 +103,10 @@ def plot_grid(bounds, res, obstacles, title=None):
     ax.set_xlabel('X Coordinate')
     ax.set_ylabel('Y Coordinate')
     ax.set_aspect('equal')
+    
+    # Set axis limits
+    ax.set_xlim(bounds[0])
+    ax.set_ylim(bounds[1])
 
     if title is None:
         ax.set_title('A* Gridworld')
@@ -256,7 +275,7 @@ def q8():
     start = np.array([-2, -6])
     goal = np.array([4, 5])
     a_star_path = a_star(start, goal, bounds, res, obstacles)
-    x_traj = sim_rk4(a_star_path, kv=1.0, kw=1.0, h=0.1, noise=1e-2, thresh=5e-1)
+    x_traj = sim_rk4(a_star_path, kv=1.0, kw=1.0, h=0.1, noise=1e-2, thresh=9e-2)
     plot_search(start, goal, a_star_path, bounds, res, obstacles, f'Interpolated Robot Path with A* Search', 'q8.png', traj=x_traj)
 
     print("Done\n")
@@ -303,7 +322,7 @@ def q10():
     # Compute A* path
     start = np.array([-2, -6])
     goal = np.array([4, 5])
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.01, noise=1e-2, thresh=5e-1)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.01, noise=1e-2, thresh=0.1)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q10.png', traj=x_traj)
 
     print("Done\n")
@@ -322,17 +341,17 @@ def q11():
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
     path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11a.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11a.png', traj=x_traj, display_robot=True)
 
     start = round_to_res(np.array([4.5, 3.5]), res)
     goal = round_to_res(np.array([4.5, -1.5]), res)
     path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11b.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11b.png', traj=x_traj, display_robot=True)
 
     start = round_to_res(np.array([-0.5, 5.5]), res)
     goal = round_to_res(np.array([1.5, -3.5]), res)
     path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11c.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11c.png', traj=x_traj, display_robot=True)
 
     res = 1.0
     obstacles = get_obstacles(bounds, res, inflate=0)
