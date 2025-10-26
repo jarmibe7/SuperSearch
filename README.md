@@ -1,11 +1,11 @@
 # Robot Navigation
 ### ME 469: HW1
 ### Author: Jared Berry
-### Due: 10/17/2025
+### Due: 10/27/2025
 
 Hello!
 
-To run for submission A, run the following command from directory HW1/:
+To run for submission B, run the following command from directory HW1/:
 
 ```
 
@@ -13,9 +13,12 @@ python run.py
 
 ```
 
-Plots for questions 3, 5, and 7 will populate in figures/, and data (ds1) is located in data/.
+All plots will populate in figures/, and data (ds1) is located in data/. JSON files with metrics will populate in
+metrics/
 
-In each A* path plot, the blue cell is the start and the green cell is the goal.
+In each A* path plot, the blue cell is the start and the green cell is the goal. The plots with robot trajectories
+will represent the full trajectory with a black line, and will also plot the robot position and heading as a blue arrow
+at a certain interval.
 
 #### Code Structure
 

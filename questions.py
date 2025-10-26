@@ -82,7 +82,7 @@ def plot_search(start, goal, path, bounds, res, obstacles, title, filename, traj
     # Plot start and goal
     start_rect = patches.Rectangle(
         (start[0], start[1]), res, res,
-        facecolor='purple', edgecolor='black'
+        facecolor='blue', edgecolor='black'
     )
     ax.add_patch(start_rect)
     goal_rect = patches.Rectangle(
@@ -138,13 +138,13 @@ def plot_grid(bounds, res, obstacles, title=None):
 
     # Set up axis labels
     if res >= 0.5:
-        ax.set_xticklabels(x_range)
-        ax.set_yticklabels(y_range)
+        ax.set_xticklabels(x_range, fontsize=12)
+        ax.set_yticklabels(y_range, fontsize=12)
     else:
         ax.set_xticklabels([])
         ax.set_yticklabels([])
-    ax.set_xlabel('X Coordinate')
-    ax.set_ylabel('Y Coordinate')
+    ax.set_xlabel('X Coordinate', fontsize=14)
+    ax.set_ylabel('Y Coordinate', fontsize=14)
     ax.set_aspect('equal')
     
     # Set axis limits
@@ -152,11 +152,11 @@ def plot_grid(bounds, res, obstacles, title=None):
     ax.set_ylim(bounds[1])
 
     if title is None:
-        ax.set_title('A* Gridworld')
+        ax.set_title('A* Gridworld', fontsize=16)
         fig_path = os.path.join(PLOT_PATH, 'q1.png')
         plt.savefig(fig_path)
     else:
-        ax.set_title(title)
+        ax.set_title(title, fontsize=16)
 
     return fig, ax
 
@@ -189,7 +189,7 @@ def q2():
     goal = np.array([4, 5])
 
     path = a_star(start, goal, bounds, res, obstacles)
-    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q2.png')
+    plot_search(start, goal, path, bounds, res, obstacles, 'Offline A* Search', 'q2.png')
 
     print("Done\n")
 
@@ -205,17 +205,17 @@ def q3():
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
     path = a_star(start, goal, bounds, res, obstacles)
-    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q3a.png')
+    plot_search(start, goal, path, bounds, res, obstacles, 'Offline A* Search', 'q3a.png')
 
     start = round_to_res(np.array([4.5, 3.5]), res)
     goal = round_to_res(np.array([4.5, -1.5]), res)
     path = a_star(start, goal, bounds, res, obstacles)
-    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q3b.png')
+    plot_search(start, goal, path, bounds, res, obstacles, 'Offline A* Search', 'q3b.png')
 
     start = round_to_res(np.array([-0.5, 5.5]), res)
     goal = round_to_res(np.array([1.5, -3.5]), res)
     path = a_star(start, goal, bounds, res, obstacles)
-    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q3c.png')
+    plot_search(start, goal, path, bounds, res, obstacles, 'Offline A* Search', 'q3c.png')
 
     print("Done\n")
 
@@ -247,17 +247,17 @@ def q5():
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
     path = a_star_online(start, goal, bounds, res, obstacles)
-    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5a.png')
+    plot_search(start, goal, path, bounds, res, obstacles, 'Online A* Search', 'q5a.png')
 
     start = round_to_res(np.array([4.5, 3.5]), res)
     goal = round_to_res(np.array([4.5, -1.5]), res)
     path = a_star_online(start, goal, bounds, res, obstacles)
-    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5b.png')
+    plot_search(start, goal, path, bounds, res, obstacles, 'Online A* Search', 'q5b.png')
 
     start = round_to_res(np.array([-0.5, 5.5]), res)
     goal = round_to_res(np.array([1.5, -3.5]), res)
     path = a_star_online(start, goal, bounds, res, obstacles)
-    plot_search(start, goal, path, bounds, res, obstacles, 'Basic A* Search', 'q5c.png')
+    plot_search(start, goal, path, bounds, res, obstacles, 'Online A* Search', 'q5c.png')
 
     print("Done\n")
 
@@ -366,7 +366,22 @@ def q10():
     start = np.array([-2, -6])
     goal = np.array([4, 5])
     path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.01, noise=1e-2, thresh=0.1)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q10.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q10.png', traj=x_traj)
+
+    start = round_to_res(np.array([2.45, -3.55]), res)
+    goal = round_to_res(np.array([0.95, -1.55]), res)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.01, noise=1e-2, thresh=0.1)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q10a.png', traj=x_traj)
+
+    start = round_to_res(np.array([4.95, -0.05]), res)
+    goal = round_to_res(np.array([2.45, 0.25]), res)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.01, noise=1e-2, thresh=0.1)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q10b.png', traj=x_traj)
+
+    start = round_to_res(np.array([-0.55, 1.45]), res)
+    goal = round_to_res(np.array([1.95, 3.95]), res)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.01, noise=1e-2, thresh=0.2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q10c.png', traj=x_traj)
 
     print("Done\n")
 
@@ -383,18 +398,18 @@ def q11():
 
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11a.png', traj=x_traj, display_robot=True)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=8e-2, interp=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q11a.png', traj=x_traj, display_robot=True)
 
     start = round_to_res(np.array([4.5, 3.5]), res)
     goal = round_to_res(np.array([4.5, -1.5]), res)
-    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11b.png', traj=x_traj, display_robot=True)
+    path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=8.5e-2, interp=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q11b.png', traj=x_traj, display_robot=True)
 
     start = round_to_res(np.array([-0.5, 5.5]), res)
     goal = round_to_res(np.array([1.5, -3.5]), res)
     path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11c.png', traj=x_traj, display_robot=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q11c.png', traj=x_traj, display_robot=True)
 
     res = 1.0
     obstacles = get_obstacles(bounds, res, inflate=0)
@@ -402,17 +417,17 @@ def q11():
     start = round_to_res(np.array([0.5, -1.5]), res)
     goal = round_to_res(np.array([0.5, 1.5]), res)
     path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11d.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q11d.png', traj=x_traj)
 
     start = round_to_res(np.array([4.5, 3.5]), res)
     goal = round_to_res(np.array([4.5, -1.5]), res)
     path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11e.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q11e.png', traj=x_traj)
 
     start = round_to_res(np.array([-0.5, 5.5]), res)
     goal = round_to_res(np.array([1.5, -3.5]), res)
     path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11f.png', traj=x_traj)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search', 'q11f.png', traj=x_traj)
 
     print("Done\n")
 
@@ -429,13 +444,13 @@ def noise():
     start = round_to_res(np.array([-0.5, 5.5]), res)
     goal = round_to_res(np.array([1.5, -3.5]), res)
     path, x_traj_gt = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.0, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search - Low Noise', 'noise_none.png', traj=x_traj_gt, display_robot=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search - Low Noise', 'noise_none.png', traj=x_traj_gt, display_robot=True)
 
     path, x_traj_med = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.01, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search - Moderate Noise', 'noise_med.png', traj=x_traj_med, display_robot=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search - Moderate Noise', 'noise_med.png', traj=x_traj_med, display_robot=True)
 
     path, x_traj_high = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.1, thresh=9e-2, interp=True)
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search - High Noise', 'noise_high.png', traj=x_traj_high, display_robot=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Robot Path with A* Search - High Noise', 'noise_high.png', traj=x_traj_high, display_robot=True)
 
     # Compute statistics
     num_samples = x_traj_gt.shape[0]
@@ -473,7 +488,7 @@ def res_comp():
     path, x_traj_fine = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
     end_time = time.time()
     fine_duration = end_time - start_time
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Fine Resolution', 'on_fine.png', traj=x_traj_fine, display_robot=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Fine Resolution', 'on_fine.png', traj=x_traj_fine, display_robot=True)
 
     res = 1.0
     obstacles = get_obstacles(bounds, res, inflate=0)
@@ -484,10 +499,12 @@ def res_comp():
     path, x_traj_coarse = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
     end_time = time.time()
     coarse_duration = end_time - start_time
-    plot_search(start, goal, path, bounds, res, obstacles, f'Online Coarse Resolution', 'on_coarse.png', traj=x_traj_coarse, display_robot=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Real-Time Coarse Resolution', 'on_coarse.png', traj=x_traj_coarse, display_robot=True)
 
     # Compute statistics
     num_samples = x_traj_gt.shape[0]
+    num_timesteps_fine = x_traj_fine.shape[0]
+    num_timesteps_coarse = x_traj_coarse.shape[0]
     traj_fine_resamp = t_match(x_traj_fine, num_samples)
     traj_coarse_resamp = t_match(x_traj_coarse, num_samples)
     traj_gt_resamp = t_match(x_traj_gt, num_samples)
@@ -495,6 +512,8 @@ def res_comp():
     stats_coarse = compute_traj_statistics(traj_coarse_resamp, traj_gt_resamp)
     stats_fine['runtime'] = fine_duration
     stats_coarse['runtime'] = coarse_duration
+    stats_fine['num_timesteps'] = num_timesteps_fine
+    stats_coarse['num_timesteps'] = num_timesteps_coarse
 
     metrics_dict = {'fine': stats_fine, 'coarse': stats_coarse}
     for key, value in metrics_dict.items():
