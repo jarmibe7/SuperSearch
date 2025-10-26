@@ -301,11 +301,17 @@ def a_star_real(start_f, goal_f, bounds_f, res, obstacles_f, kv, kw, h=0.1, nois
                 if res < a_res and known_obstacles_i:
                     known_obstacles_col = inflate_obstacles(bounds, res, np.array(list(known_obstacles_i)) + a_res/2, inflate=3)
                 else:
-                    known_obstacles_col = known_obstacles_f
+                    known_obstacles_col = known_obstacles_f.copy()
 
                 # Move to next via point
                 for x_des in x_des_traj:
                     while np.linalg.norm(x_des - x_curr[0:2]) > thresh:
+                        # # TODO: Check for obstacles within one grid cell of robot, that 
+                        # # don't directly obstruct A* path
+                        # curr_cell = pos_to_grid(x_curr[0:2], res=a_res)
+                        # if curr_cell in obstacles or (tuple(x_curr[0:2]) in obstacles_f):
+                        #     known_obstacles_col.add(tuple(x_curr[0:2]))
+
                         # Compute potential field based on known obstacles
                         if obs_avoid and known_obstacles_col:
                             des_vecs_to_obstacles = np.array([o - x_des for o in known_obstacles_col])

@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.path as mpl_path
 import os
+import json
+import time
 
 from search import a_star, a_star_online, a_star_real
 from motion import a_star_to_kspline, sim_rk4
@@ -21,10 +23,51 @@ PLOT_PATH = os.path.join(__file__, "..\\figures")
 DATA_PATH = os.path.join(__file__, "..\\data")
 METRICS_PATH = os.path.join(__file__, "..\\metrics")
 
+# 
+# --- Evaluation ---
+#
+#
+# --- Evaluation Metrics ---
+#
+def t_match(traj, num_samples):
+    """
+    Resample a trajectory to have a certain number of samples
+    """
+    old_path_idx = np.linspace(0, 1, traj.shape[0])
+    new_path_idx = np.linspace(0, 1, num_samples)
+
+    traj_resamp = np.column_stack([
+        np.interp(new_path_idx, old_path_idx, traj[:, i]) for i in range(traj.shape[1])
+    ])
+
+    return traj_resamp
+
+def rmse(predicted, actual, angle=False):
+    """
+    Given two 1D numpy arrays of the same length, compute Root Mean Squared Error
+    between them.
+    """
+    if angle: error = np.unwrap(actual - predicted)
+    else: error = np.linalg.norm(actual - predicted)
+    return np.sqrt(error)
+
+def compute_traj_statistics(predicted, actual):
+    """
+    Given a trajectory, compute various statistics about it from a ground truth.
+    """
+    stats = {}
+    stats['rmse_x'] = rmse(predicted[:, 0], actual[:, 0])
+    stats['rmse_y'] = rmse(predicted[:, 1], actual[:, 1])
+    stats['rmse_theta'] = rmse(predicted[:, 2], actual[:, 2])
+    stats['corr_x'] = np.corrcoef(predicted[:, 0], actual[:, 0])[0, 1]
+    stats['corr_y'] = np.corrcoef(predicted[:, 1], actual[:, 1])[0, 1]
+    stats['corr_theta'] = np.corrcoef(predicted[:, 2], actual[:, 2])[0, 1]
+
+    return stats
+
 #
 # --- Plotting ---
 #
-
 def plot_search(start, goal, path, bounds, res, obstacles, title, filename, traj=None, display_robot=True):
     fig, ax = plot_grid(bounds, res, obstacles, title)
 
@@ -54,16 +97,16 @@ def plot_search(start, goal, path, bounds, res, obstacles, title, filename, traj
     if traj is not None and display_robot:
         arrow = np.array([[0.1, 0.3], [0.1, -0.3], 
                           [1.0, 0.0], [0.1, 0.3]])  # arrow shape
-        color = 'blue'
+        color = 'dodgerblue'
         for i, xt in enumerate(traj):
-            if i % (traj.shape[0] // 25) == 0 or i == 0:
+            if i % (traj.shape[0] // 15) == 0 or i == 0:
                 # Plot robot location and heading
                 R = np.array([[np.cos(xt[2]), np.sin(xt[2])],
                                             [-np.sin(xt[2]), np.cos(xt[2])]])
                 arrow_rot = 2*arrow @ R
                 codes = [mpl_path.Path.MOVETO, mpl_path.Path.LINETO, mpl_path.Path.LINETO, mpl_path.Path.CLOSEPOLY]
                 arrow_head_marker = mpl_path.Path(arrow_rot, codes)
-                ax.plot(xt[0], xt[1], linestyle='', marker=arrow_head_marker, markersize=12, color=color)
+                ax.plot(xt[0], xt[1], linestyle='', marker=arrow_head_marker, markersize=20, color=color)
 
     fig_path = os.path.join(PLOT_PATH, filename)
     plt.savefig(fig_path)
@@ -371,4 +414,91 @@ def q11():
     path, x_traj = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
     plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search', 'q11f.png', traj=x_traj)
 
+    print("Done\n")
+
+def noise():
+    print("Running noise comparison...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 0.1
+    obstacles = get_obstacles(bounds, res, inflate=3)
+
+
+    start = round_to_res(np.array([-0.5, 5.5]), res)
+    goal = round_to_res(np.array([1.5, -3.5]), res)
+    path, x_traj_gt = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.0, thresh=9e-2, interp=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search - Low Noise', 'noise_none.png', traj=x_traj_gt, display_robot=True)
+
+    path, x_traj_med = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.01, thresh=9e-2, interp=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search - Moderate Noise', 'noise_med.png', traj=x_traj_med, display_robot=True)
+
+    path, x_traj_high = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=0.1, thresh=9e-2, interp=True)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Robot Path with A* Search - High Noise', 'noise_high.png', traj=x_traj_high, display_robot=True)
+
+    # Compute statistics
+    num_samples = x_traj_gt.shape[0]
+    traj_med_resamp = t_match(x_traj_med, num_samples)
+    traj_high_resamp = t_match(x_traj_high, num_samples)
+    traj_gt_resamp = t_match(x_traj_gt, num_samples)
+    stats_med = compute_traj_statistics(traj_med_resamp, traj_gt_resamp)
+    stats_high = compute_traj_statistics(traj_high_resamp, traj_gt_resamp)
+
+    metrics_dict = {'med': stats_med, 'high': stats_high}
+    for key, value in metrics_dict.items():
+        met_path = os.path.join(METRICS_PATH, f'{key}_metrics.json')
+        with open(met_path, "w") as f:
+            json.dump(value, f, indent=4)
+
+    print("Done\n")
+
+def res_comp():
+    print("Running resolution comparison...", end="", flush=True)
+    bounds = [
+        [-2, 5],    # x bounds
+        [-6, 6]     # y bounds
+    ]
+    res = 0.1
+    obstacles = get_obstacles(bounds, res, inflate=3)
+    noi = 0.0
+
+    start = round_to_res(np.array([-0.5, 5.5]), res)
+    goal = round_to_res(np.array([1.5, -3.5]), res)
+    path = a_star(start, goal, bounds, res, obstacles)
+    x_traj_gt = sim_rk4(path, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2)
+    plot_search(start, goal, path, bounds, res, obstacles, f'Offline Fine Resolution', 'off_fine.png', traj=x_traj_gt, display_robot=True)
+
+    start_time = time.time()
+    path, x_traj_fine = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
+    end_time = time.time()
+    fine_duration = end_time - start_time
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Fine Resolution', 'on_fine.png', traj=x_traj_fine, display_robot=True)
+
+    res = 1.0
+    obstacles = get_obstacles(bounds, res, inflate=0)
+    start = round_to_res(np.array([-0.5, 5.5]), res)
+    goal = round_to_res(np.array([1.5, -3.5]), res)
+
+    start_time = time.time()
+    path, x_traj_coarse = a_star_real(start, goal, bounds, res, obstacles, kv=1.0, kw=1.0, h=0.1, noise=noi, thresh=9e-2, interp=True)
+    end_time = time.time()
+    coarse_duration = end_time - start_time
+    plot_search(start, goal, path, bounds, res, obstacles, f'Online Coarse Resolution', 'on_coarse.png', traj=x_traj_coarse, display_robot=True)
+
+    # Compute statistics
+    num_samples = x_traj_gt.shape[0]
+    traj_fine_resamp = t_match(x_traj_fine, num_samples)
+    traj_coarse_resamp = t_match(x_traj_coarse, num_samples)
+    traj_gt_resamp = t_match(x_traj_gt, num_samples)
+    stats_fine = compute_traj_statistics(traj_fine_resamp, traj_gt_resamp)
+    stats_coarse = compute_traj_statistics(traj_coarse_resamp, traj_gt_resamp)
+    stats_fine['runtime'] = fine_duration
+    stats_coarse['runtime'] = coarse_duration
+
+    metrics_dict = {'fine': stats_fine, 'coarse': stats_coarse}
+    for key, value in metrics_dict.items():
+        met_path = os.path.join(METRICS_PATH, f'{key}_metrics.json')
+        with open(met_path, "w") as f:
+            json.dump(value, f, indent=4)
     print("Done\n")
